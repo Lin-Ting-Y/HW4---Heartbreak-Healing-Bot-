@@ -32,9 +32,11 @@ except Exception as _e:
 
 def load_env() -> str:
     load_dotenv()
-    api_key = os.getenv("GOOGLE_API_KEY")
+    api_key = os.getenv("GOOGLE_API_KEY") or st.secrets.get("GOOGLE_API_KEY", "")
+    if api_key:
+        os.environ["GOOGLE_API_KEY"] = api_key  # keep downstream libs happy
     if not api_key:
-        st.warning("GOOGLE_API_KEY missing in .env", icon="⚠️")
+        st.warning("缺少 GOOGLE_API_KEY，請在 .env 或 Streamlit secrets 中設定。", icon="⚠️")
     return api_key
 
 
