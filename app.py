@@ -90,8 +90,8 @@ def build_persona_prompt(context: str) -> str:
 def main():
     st.set_page_config(page_title="Heartbreak Healing Bot", page_icon="💗")
     st.title("💗 Heartbreak Healing Bot")
-    st.subheader("失戀陣線聯盟關心你")
-    st.caption("溫柔的 RAG 助理，採用 Gemini 2.0。")
+    st.subheader("失戀陣線聯盟關心你 拒絕戀愛腦大作戰")
+    # st.caption("溫柔的 RAG 助理，採用 Gemini 2.0。")
 
     api_key = load_env()
 

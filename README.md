@@ -4,6 +4,9 @@
 
 這個專案強調「陪伴」和「可共感的語氣」，結合 RAG（Retrieval Augmented Generation）與 Gemini 2.0，擷取自製的療癒文章與失戀陪伴素材，盡力讓回覆溫暖、真誠。希望未來不只幫助她，也能陪伴更多被失戀傷到的人。
 
+## 線上體驗
+- [Heartbreak Healing Bot（Streamlit）](https://heartbreak-healing-bot.streamlit.app/)
+
 ## 功能亮點
 - Streamlit 介面，簡潔、可直接部署。
 - FAISS 向量資料庫搭配 HuggingFace Embeddings，檢索書籍與療癒文章。
@@ -54,4 +57,4 @@ streamlit run app.py
 ## 未來方向
 - 針對沒有 `books/` 檔案時的提示與引導（避免初次啟動失敗）。
 - 更細緻的對話流程與情緒追蹤，例如記錄使用者心情變化。
-- 部署到 Streamlit Community Cloud 或其他平台，讓朋友更容易連線使用。
+- 持續優化 Streamlit 雲端部署（UI、使用者回饋、監控資源使用）。
