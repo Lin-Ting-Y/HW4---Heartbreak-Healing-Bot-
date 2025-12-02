@@ -4,6 +4,7 @@ Uses Gemini 2.0 models (flash / pro-exp) and FAISS RAG.
 
 import os
 from pathlib import Path
+from typing import Any
 import streamlit as st
 from dotenv import load_dotenv
 
@@ -21,7 +22,7 @@ from langchain_community.document_loaders import DirectoryLoader, TextLoader
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 try:
-    from langchain_google_genai import ChatGoogleGenerativeAI
+    from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
     _LC_GOOGLE_AVAILABLE = True
     _LC_GOOGLE_ERR = None
 except Exception as _e:
@@ -40,17 +41,27 @@ def load_env() -> str:
     return api_key
 
 
-def get_vector_store(books_dir: str = "books", cache_dir: str = ".faiss_index") -> FAISS:
+def _build_embeddings(api_key: str | None) -> Any:
+    if _LC_GOOGLE_AVAILABLE:
+        key = api_key or os.getenv("GOOGLE_API_KEY", "")
+        return GoogleGenerativeAIEmbeddings(
+            model="text-embedding-004",
+            google_api_key=key,
+        )
+    return HuggingFaceEmbeddings(
+        model_name="sentence-transformers/all-MiniLM-L6-v2",
+        model_kwargs={"device": "cpu"},
+    )
+
+
+def get_vector_store(books_dir: str = "books", cache_dir: str = ".faiss_index", api_key: str | None = None) -> FAISS:
     base_path = Path(books_dir)
     base_path.mkdir(parents=True, exist_ok=True)
 
     cache_path = Path(cache_dir)
     if cache_path.exists():
         try:
-            embeddings = HuggingFaceEmbeddings(
-                model_name="sentence-transformers/all-MiniLM-L6-v2",
-                model_kwargs={"device": "cpu"},
-            )
+            embeddings = _build_embeddings(api_key)
             return FAISS.load_local(str(cache_path), embeddings, allow_dangerous_deserialization=True)
         except Exception:
             pass
@@ -65,10 +76,7 @@ def get_vector_store(books_dir: str = "books", cache_dir: str = ".faiss_index") 
     docs = loader.load()
     splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
     chunks = splitter.split_documents(docs)
-    embeddings = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2",
-        model_kwargs={"device": "cpu"},
-    )
+    embeddings = _build_embeddings(api_key)
     vs = FAISS.from_documents(chunks, embeddings)
     cache_path.mkdir(parents=True, exist_ok=True)
     vs.save_local(str(cache_path))
@@ -103,7 +111,7 @@ def main():
 
     if "vector_store" not in st.session_state:
         with st.spinner("Building vector store …"):
-            st.session_state.vector_store = get_vector_store("books")
+            st.session_state.vector_store = get_vector_store("books", api_key=api_key)
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
@@ -129,7 +137,7 @@ def main():
                     rmtree(Path(".faiss_index"))
                 except Exception:
                     pass
-                st.session_state.vector_store = get_vector_store("books")
+                st.session_state.vector_store = get_vector_store("books", api_key=api_key)
             st.success("重建完成！")
 
     placeholder_input = "想說什麼都可以…我在這裡陪你"
