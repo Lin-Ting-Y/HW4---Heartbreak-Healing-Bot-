@@ -47,7 +47,10 @@ def get_vector_store(books_dir: str = "books", cache_dir: str = ".faiss_index") 
     cache_path = Path(cache_dir)
     if cache_path.exists():
         try:
-            embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+            embeddings = HuggingFaceEmbeddings(
+                model_name="sentence-transformers/all-MiniLM-L6-v2",
+                model_kwargs={"device": "cpu"},
+            )
             return FAISS.load_local(str(cache_path), embeddings, allow_dangerous_deserialization=True)
         except Exception:
             pass
@@ -62,7 +65,10 @@ def get_vector_store(books_dir: str = "books", cache_dir: str = ".faiss_index") 
     docs = loader.load()
     splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
     chunks = splitter.split_documents(docs)
-    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    embeddings = HuggingFaceEmbeddings(
+        model_name="sentence-transformers/all-MiniLM-L6-v2",
+        model_kwargs={"device": "cpu"},
+    )
     vs = FAISS.from_documents(chunks, embeddings)
     cache_path.mkdir(parents=True, exist_ok=True)
     vs.save_local(str(cache_path))
