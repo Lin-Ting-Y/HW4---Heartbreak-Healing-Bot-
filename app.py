@@ -5,24 +5,16 @@ import streamlit as st
 from dotenv import load_dotenv
 
 # --- LangChain Imports ---
+# 確保引入正確的模組
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_community.document_loaders import DirectoryLoader, TextLoader
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
+from langchain_google_genai import ChatGoogleGenerativeAI
 
-try:
-    from langchain_google_genai import ChatGoogleGenerativeAI
-    _HAS_LC_GOOGLE = True
-    _LC_GOOGLE_ERR = None
-except Exception as _e:
-    _HAS_LC_GOOGLE = False
-    _LC_GOOGLE_ERR = str(_e)
-    ChatGoogleGenerativeAI = None  # type: ignore
-    import google.generativeai as genai
 
-# 1. 環境變數載入與檢查
-def load_env() -> str:
+def load_env():
     load_dotenv()
     # 優先從環境變數讀取，其次從 Streamlit Secrets (雲端部署用)
     api_key = os.getenv("GOOGLE_API_KEY") or st.secrets.get("GOOGLE_API_KEY", "")
@@ -33,21 +25,22 @@ def load_env() -> str:
         st.warning("⚠️ 缺少 GOOGLE_API_KEY，請在 .env 或 Streamlit secrets 中設定。", icon="⚠️")
     return api_key
 
-# 2. 建立向量資料庫 (強制使用 CPU 版 HuggingFace，穩定且免費)
+
 def get_vector_store(books_dir: str = "books", cache_dir: str = ".faiss_index") -> FAISS:
     base_path = Path(books_dir)
     if not base_path.exists():
         base_path.mkdir(parents=True, exist_ok=True)
 
+    # 設定 Embedding 模型 (強制指定 CPU，避免雲端錯誤)
+    embeddings = HuggingFaceEmbeddings(
+        model_name="sentence-transformers/all-MiniLM-L6-v2",
+        model_kwargs={"device": "cpu"}
+    )
+
     # 嘗試讀取快取
     cache_path = Path(cache_dir)
     if cache_path.exists():
         try:
-            # 強制指定 device="cpu"，避免在雲端找不到 GPU 而報錯
-            embeddings = HuggingFaceEmbeddings(
-                model_name="sentence-transformers/all-MiniLM-L6-v2",
-                model_kwargs={"device": "cpu"}
-            )
             return FAISS.load_local(str(cache_path), embeddings, allow_dangerous_deserialization=True)
         except Exception:
             pass # 讀取失敗就重新建立
@@ -70,10 +63,6 @@ def get_vector_store(books_dir: str = "books", cache_dir: str = ".faiss_index") 
     chunks = splitter.split_documents(docs)
     
     # 建立新索引
-    embeddings = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2",
-        model_kwargs={"device": "cpu"}
-    )
     vector_store = FAISS.from_documents(chunks, embeddings)
     
     # 儲存快取
@@ -81,7 +70,7 @@ def get_vector_store(books_dir: str = "books", cache_dir: str = ".faiss_index") 
     vector_store.save_local(str(cache_path))
     return vector_store
 
-# 3. 建立 AI 人設 Prompt
+
 def build_persona_prompt(context: str) -> str:
     persona = (
         "你是一位『暖心療癒師』— 一位溫暖、善於傾聽的好朋友。"
@@ -101,10 +90,12 @@ def build_persona_prompt(context: str) -> str:
 
 
 def main():
-    st.set_page_config(page_title="暖心療癒 Agent", page_icon="❤️‍🩹")
-    st.title("Heartbreak Healing Bot")
+    # ✅ 修改標題與 Icon
+    st.set_page_config(page_title="Heartbreak Healing Bot", page_icon="💗")
+    st.title("💗 Heartbreak Healing Bot")
+    # ✅ 修改副標題 (你要的那兩句)
     st.subheader("失戀陣線聯盟關心你 拒絕戀愛腦大作戰")
-
+    
     api_key = load_env()
 
     # 初始化資料庫
@@ -194,23 +185,13 @@ def main():
         with st.chat_message("assistant"):
             with st.spinner("正在用心撰寫回應..."):
                 try:
-                    if _HAS_LC_GOOGLE:
-                        llm = ChatGoogleGenerativeAI(
-                            model=model_name,
-                            google_api_key=api_key,
-                            temperature=temperature,
-                        )
-                        response = llm.invoke(messages)
-                        reply_text = getattr(response, "content", str(response))
-                    else:
-                        genai.configure(api_key=api_key)
-                        gmodel = genai.GenerativeModel(model_name)
-                        fallback_prompt = system_prompt + "\n\n使用者：\n" + user_input
-                        response = gmodel.generate_content(
-                            fallback_prompt,
-                            generation_config={"temperature": temperature},
-                        )
-                        reply_text = getattr(response, "text", str(response))
+                    llm = ChatGoogleGenerativeAI(
+                        model=model_name,
+                        google_api_key=api_key,
+                        temperature=temperature,
+                    )
+                    response = llm.invoke(messages)
+                    reply_text = getattr(response, "content", str(response))
                     
                     # 顯示資料來源
                     if sources:
@@ -220,10 +201,7 @@ def main():
                     st.session_state.messages.append({"role": "assistant", "content": reply_text})
                 
                 except Exception as e:
-                    err_msg = str(e)
-                    if not _HAS_LC_GOOGLE and _LC_GOOGLE_ERR:
-                        err_msg += f"\nImport error: {_LC_GOOGLE_ERR}"
-                    st.error(f"發生錯誤: {err_msg}")
+                    st.error(f"發生錯誤: {e}")
 
 if __name__ == "__main__":
     main()

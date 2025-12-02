@@ -3,7 +3,7 @@
 **Date:** 2025-11-29
 
 ## 專案初衷
-好友最近經歷失戀，夜深時常被不安驚醒，也不知道可以向誰傾訴。為了讓她在孤單時至少能有溫柔的陪伴，我決定打造 Heartbreak Healing Bot。靈感主要來自蔡炎龍老師的 GitHub 範例《demo6 RAG 打造向量、系統、_打造心靈處方籤機器人》，我沿用其中的結構觀念與實作技巧，再加入自己整理的療癒文本，希望讓這個小小的 AI 夥伴成為她的臨時避風港。
+好友最近經歷失戀，夜深時常被不安驚醒，也不知道可以向誰傾訴。為了讓她在孤單時至少能有溫柔的陪伴，我決定打造 Heartbreak Healing Bot。靈感主要來自蔡炎龍老師的 GitHub 範例《demo6 RAG 打造向量、系統、打造心靈處方籤機器人》，我沿用其中的結構觀念與實作技巧，再加入自己整理的療癒文本，希望讓這個小小的 AI 夥伴成為她的臨時避風港。
 
 ## Overview
 - Conducted targeted review and made incremental updates to `app.py` for the Heartbreak Healing Bot Streamlit application.
