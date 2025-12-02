@@ -29,6 +29,7 @@ def get_vector_store(books_dir: str = "books", cache_dir: str = ".faiss_index") 
     if not base_path.exists():
         base_path.mkdir(parents=True, exist_ok=True)
 
+    # 強制使用 CPU，避免雲端部署錯誤
     embeddings = HuggingFaceEmbeddings(
         model_name="sentence-transformers/all-MiniLM-L6-v2",
         model_kwargs={"device": "cpu"}
@@ -102,11 +103,12 @@ def main():
     with st.sidebar:
         st.header("設定")
         
+        # ✅ 這裡已經設定 gemini-2.5-flash 為第一個選項（預設值）
         model_name = st.selectbox(
             "Gemini 模型",
-            options=["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"],
+            options=["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-pro", "gemini-1.5-pro"],
             index=0,
-            help="Flash 速度快，Pro 邏輯強。",
+            help="預設使用最新的 2.5 Flash 模型，速度快且回應品質高！",
         )
         
         temperature = st.slider(
@@ -118,7 +120,6 @@ def main():
         
         st.divider()
         
-        # 兩個按鈕放在同一行比較好看
         col1, col2 = st.columns(2)
         with col1:
             if st.button("🔄 重建大腦"):
@@ -137,7 +138,7 @@ def main():
                 st.rerun()
 
     if not st.session_state.vector_store:
-        st.info("👈 請在 `books` 資料夾放入 .txt 文章，並點擊側邊欄的「重建知識庫」。")
+        st.info("👈 請在 `books` 資料夾放入 .txt 文章，並點擊側邊欄的「重建大腦」。")
         return
 
     user_input = st.chat_input("想說什麼都可以，我在這裡陪你...")
@@ -179,14 +180,14 @@ def main():
                     response = llm.invoke(messages)
                     reply_text = getattr(response, "content", str(response))
                     
-                    # 確認已移除資料來源顯示
                     st.markdown(reply_text)
                     st.session_state.messages.append({"role": "assistant", "content": reply_text})
                 
                 except Exception as e:
                     err_msg = str(e)
+                    # 針對額度問題給出更精確的建議
                     if "429" in err_msg or "Quota" in err_msg:
-                        st.error("🚨 今日免費額度已滿，請稍後再試。")
+                        st.error("🚨 該模型的今日額度已滿，請切換回 gemini-2.0-flash 或其他模型試試。")
                     else:
                         st.error(f"發生錯誤: {err_msg}")
 
