@@ -117,15 +117,24 @@ def main():
         st.caption("💡 提示：數值越高，回應越溫暖感性。")
         
         st.divider()
-        if st.button("重建知識庫 (Rebuild)"):
-            with st.spinner("正在重新閱讀並整理記憶..."):
-                try:
-                    if Path(".faiss_index").exists():
-                        rmtree(Path(".faiss_index"))
-                except Exception:
-                    pass
-                st.session_state.vector_store = get_vector_store("books")
-            st.success("知識庫更新完成！")
+        
+        # 兩個按鈕放在同一行比較好看
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🔄 重建大腦"):
+                with st.spinner("正在重新閱讀..."):
+                    try:
+                        if Path(".faiss_index").exists():
+                            rmtree(Path(".faiss_index"))
+                    except Exception:
+                        pass
+                    st.session_state.vector_store = get_vector_store("books")
+                st.success("完成！")
+        
+        with col2:
+            if st.button("🗑️ 清除對話"):
+                st.session_state.messages = []
+                st.rerun()
 
     if not st.session_state.vector_store:
         st.info("👈 請在 `books` 資料夾放入 .txt 文章，並點擊側邊欄的「重建知識庫」。")
@@ -148,11 +157,6 @@ def main():
         
         context_text = "\n\n".join(d.page_content for d in docs)
         
-        sources = sorted(set(
-            (d.metadata.get("source") or "未知來源").split("\\")[-1].split("/")[-1] 
-            for d in docs
-        ))
-
         system_prompt = build_persona_prompt(context_text)
 
         if not api_key:
@@ -175,9 +179,7 @@ def main():
                     response = llm.invoke(messages)
                     reply_text = getattr(response, "content", str(response))
                     
-                    if sources:
-                        reply_text += "\n\n---\n📚 **參考資料**: " + ", ".join(sources)
-                    
+                    # 確認已移除資料來源顯示
                     st.markdown(reply_text)
                     st.session_state.messages.append({"role": "assistant", "content": reply_text})
                 
