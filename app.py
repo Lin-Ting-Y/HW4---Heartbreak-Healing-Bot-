@@ -10,7 +10,16 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_community.document_loaders import DirectoryLoader, TextLoader
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain_google_genai import ChatGoogleGenerativeAI
+
+try:
+    from langchain_google_genai import ChatGoogleGenerativeAI
+    _HAS_LC_GOOGLE = True
+    _LC_GOOGLE_ERR = None
+except Exception as _e:
+    _HAS_LC_GOOGLE = False
+    _LC_GOOGLE_ERR = str(_e)
+    ChatGoogleGenerativeAI = None  # type: ignore
+    import google.generativeai as genai
 
 # 1. 環境變數載入與檢查
 def load_env() -> str:
@@ -185,13 +194,23 @@ def main():
         with st.chat_message("assistant"):
             with st.spinner("正在用心撰寫回應..."):
                 try:
-                    llm = ChatGoogleGenerativeAI(
-                        model=model_name,
-                        google_api_key=api_key,
-                        temperature=temperature,
-                    )
-                    response = llm.invoke(messages)
-                    reply_text = getattr(response, "content", str(response))
+                    if _HAS_LC_GOOGLE:
+                        llm = ChatGoogleGenerativeAI(
+                            model=model_name,
+                            google_api_key=api_key,
+                            temperature=temperature,
+                        )
+                        response = llm.invoke(messages)
+                        reply_text = getattr(response, "content", str(response))
+                    else:
+                        genai.configure(api_key=api_key)
+                        gmodel = genai.GenerativeModel(model_name)
+                        fallback_prompt = system_prompt + "\n\n使用者：\n" + user_input
+                        response = gmodel.generate_content(
+                            fallback_prompt,
+                            generation_config={"temperature": temperature},
+                        )
+                        reply_text = getattr(response, "text", str(response))
                     
                     # 顯示資料來源
                     if sources:
@@ -201,7 +220,10 @@ def main():
                     st.session_state.messages.append({"role": "assistant", "content": reply_text})
                 
                 except Exception as e:
-                    st.error(f"發生錯誤: {e}")
+                    err_msg = str(e)
+                    if not _HAS_LC_GOOGLE and _LC_GOOGLE_ERR:
+                        err_msg += f"\nImport error: {_LC_GOOGLE_ERR}"
+                    st.error(f"發生錯誤: {err_msg}")
 
 if __name__ == "__main__":
     main()
