@@ -54,6 +54,9 @@ streamlit run app.py
 - Vector store: Local FAISS built from `books/*.txt`
 - LLM: `gemini-2.0-flash` 或 `gemini-2.0-pro-exp`
 
+## 致謝
+- 參考 [yenlung/AI-Demo](https://github.com/yenlung/AI-Demo) 的 Demo 6，協助快速了解 Streamlit 與 LangChain 的整合方式。
+
 ## 未來方向
 - 針對沒有 `books/` 檔案時的提示與引導（避免初次啟動失敗）。
 - 更細緻的對話流程與情緒追蹤，例如記錄使用者心情變化。
